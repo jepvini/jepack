@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+# This is a small single user pkgs manager for installing all the fancy
+# utilities missing on some distros weaker than ARCH
+# at the moment it is only compatible with amd64
+
+# Author: Jep Vini <leos1359531@gmail.com>
+
+VERSION=0.1
+
+declare -A PKGS
+PKGS=(
+    [fd]=10.3.0
+    [fzf]=0.67=
+    [yazi]=26.1.4
+)
+
+FONTS=(
+    ComicShannsMono
+)
+
+ROOT_DIR="$HOME/.local/jepack"
+BIN_DIR="$ROOT_DIR/bin"
+TARS_DIR="$ROOT_DIR/tars"
+FONTS_DIR="$HOME/.local/share/fonts"
+
+# VARIOUS FUNCTIONS
+
+check_dependencies () {
+    if ! [[ $(uname -r) =~ amd64 ]]; then
+        echo "ERROR: this program is only compatible with amd64" 1>&2
+        exit 1
+    fi
+    if ! curl --version > /dev/null; then
+        echo "ERROR: curl is not installed" 1>&2
+        exit 1
+    fi
+}
+
+# GENERAL FUNCTIONS
+
+create_dirs () {
+    mkdir -p "$BIN_DIR" || exit 1
+    mkdir -p "$TARS_DIR"|| exit 1
+}
+
+# INSTALL PKGS FUNCTION
+
+install_fzf () {
+    local pkgs_name="fzf-${PKGS[fzf]}-linux_amd64"
+    create_dirs
+    cd "$NVIM_TAR_DIR" || exit
+    curl -s -LO "https://github.com/junegunn/fzf/releases/download/v$REQ_FZF_VERSION/fzf-$REQ_FZF_VERSION-linux_amd64.tar.gz"
+    rm -rf "$ROOT_DIR/fzf"
+    tar -C "$NVIM_DEPENDENCY_DIR" -xzf "fzf-$REQ_FZF_VERSION-linux_amd64.tar.gz"
+    echo "fzf installed"
+}
+
+# MAIN
+
+main () {
+    check_dependencies
+}
+
+main "$@"
