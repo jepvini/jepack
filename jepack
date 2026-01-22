@@ -6,15 +6,17 @@
 
 # Author: Jep Vini <leos1359531@gmail.com>
 
-VERSION=0.1
+# VERSION=0.1
 
 declare -A PKGS
+declare -A FONTS
 PKGS=(
     [fd]=10.3.0
     [fzf]=0.67.0
     [rg]=15.1.0
     [tree-sitter]=0.26.3
     [yazi]=26.1.4
+    [rmtrash]=1.15
 )
 
 FONTS=(
@@ -29,7 +31,7 @@ FONTS_DIR="$HOME/.local/share/fonts"
 # VARIOUS FUNCTIONS
 
 which_installed () {
-    if which $1 > /dev/null; then
+    if which "$1" > /dev/null; then
         return 0
     else
         return 1
@@ -161,12 +163,25 @@ install_tree-sitter () {
     create_dirs
     cd "$TARS_DIR" || exit 1
     curl -s -LO "https://github.com/tree-sitter/tree-sitter/releases/download/v${PKGS[tree-sitter]}/$pkg_name.gz"
-    rm -f "$pkg_namee"
+    rm -f "$pkg_name"
     gzip -f -d "$pkg_name.gz" > /dev/null
     chmod +x "$pkg_name"
     mv "$pkg_name" "$BIN_DIR/tree-sitter"
-    rm -f "$pkg_namee"
+    rm -f "$pkg_name"
     echo "tree-sitter installed"
+}
+
+install_rmtrash () {
+    local pkg_name="rmtrash-${PKGS[rmtrash]}"
+    create_dirs
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/PhrozenByte/rmtrash/archive/refs/tags/v${PKGS[rmtrash]}.tar.gz"
+    rm -rf "$pkg_name"
+    tar -xf "v${PKGS[rmtrash]}.tar.gz" > /dev/null
+    mv "$pkg_name/rmtrash" "$BIN_DIR"
+    mv "$pkg_name/rmdirtrash" "$BIN_DIR"
+    rm -rf "$pkg_name"
+    echo "rmtrash installed"
 }
 
 install_comicshanns () {
@@ -189,7 +204,7 @@ main () {
     check_installed
 
     for pkg in "${!PKGS[@]}"; do
-        if ! check_pkg $pkg; then
+        if ! check_pkg "$pkg"; then
             install_"$pkg"
         fi
     done
