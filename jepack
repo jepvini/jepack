@@ -11,12 +11,13 @@ VERSION=0.1
 declare -A PKGS
 PKGS=(
     [fd]=10.3.0
-    [fzf]=0.67=
+    [fzf]=0.67.0
+    [rg]=15.1.0
     [yazi]=26.1.4
 )
 
 FONTS=(
-    ComicShannsMono
+    [ComicShannsMono]=3.4.0
 )
 
 ROOT_DIR="$HOME/.local/jepack"
@@ -26,40 +27,149 @@ FONTS_DIR="$HOME/.local/share/fonts"
 
 # VARIOUS FUNCTIONS
 
+which_installed () {
+    if which $1 > /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
 check_dependencies () {
     if ! [[ $(uname -r) =~ amd64 ]]; then
         echo "ERROR: this program is only compatible with amd64" 1>&2
         exit 1
     fi
-    if ! curl --version > /dev/null; then
+    if ! which_installed curl; then
         echo "ERROR: curl is not installed" 1>&2
+        exit 1
+    fi
+    if ! which_installed tar; then
+        echo "ERROR: tar is not installed" 1>&2
+        exit 1
+    fi
+    if ! which_installed dpkg-deb; then
+        echo "ERROR: dpkg-deb is not installed" 1>&2
+        exit 1
+    fi
+    if ! which_installed unzip; then
+        echo "ERROR: unzip is not installed" 1>&2
         exit 1
     fi
 }
 
 # GENERAL FUNCTIONS
-
 create_dirs () {
     mkdir -p "$BIN_DIR" || exit 1
     mkdir -p "$TARS_DIR"|| exit 1
+    mkdir -p "$FONTS_DIR"|| exit 1
+}
+
+# CHECK
+check_pkg () {
+    if [[ -f $BIN_DIR/$1 ]]; then
+        installed=true
+    else
+        installed=false
+    fi
+}
+
+print_check_pkg () {
+    check_pkg "$1"
+    sleep 0.1 # fancy code is running
+    if [[ $installed = false ]]; then
+        echo "✗ $1 not installed"
+    else
+        echo "✓ $1 good"
+    fi
+}
+
+check_installed () {
+    for pkg in "${!PKGS[@]}"; do
+        print_check_pkg "$pkg"
+    done
+}
+
+check_updates () {
+    echo "nope"
+}
+
+check_path () {
+    if ! [[ $PATH =~ $BIN_DIR ]]; then
+        echo "$BIN_DIR is not in you PATH" 1>&2
+    fi
 }
 
 # INSTALL PKGS FUNCTION
-
 install_fzf () {
-    local pkgs_name="fzf-${PKGS[fzf]}-linux_amd64"
+    local pkg_name="fzf-${PKGS[fzf]}-linux_amd64"
     create_dirs
-    cd "$NVIM_TAR_DIR" || exit
-    curl -s -LO "https://github.com/junegunn/fzf/releases/download/v$REQ_FZF_VERSION/fzf-$REQ_FZF_VERSION-linux_amd64.tar.gz"
-    rm -rf "$ROOT_DIR/fzf"
-    tar -C "$NVIM_DEPENDENCY_DIR" -xzf "fzf-$REQ_FZF_VERSION-linux_amd64.tar.gz"
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/junegunn/fzf/releases/download/v${PKGS[fzf]}/$pkg_name.tar.gz"
+    rm -rf "$BIN_DIR/fzf"
+    tar -C "$BIN_DIR" -xzf "$pkg_name.tar.gz"
     echo "fzf installed"
+}
+
+install_fd () {
+    local pkg_name="fd-v${PKGS[fd]}-x86_64-unknown-linux-gnu"
+    create_dirs
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/sharkdp/fd/releases/download/v${PKGS[fd]}/$pkg_name.tar.gz"
+    rm -rf "$pkg_name"
+    tar -xzf "$pkg_name.tar.gz"
+    mv "$pkg_name/fd" "$BIN_DIR"
+    rm -r "$pkg_name"
+    echo "fd installed"
+}
+
+install_yazi () {
+    local pkg_name="yazi-x86_64-unknown-linux-gnu"
+    create_dirs
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/sxyazi/yazi/releases/download/v${PKGS[yazi]}/$pkg_name.zip"
+    rm -rf "$pkg_name"
+    unzip "$pkg_name.zip" > /dev/null
+    mv "$pkg_name/yazi" "$BIN_DIR"
+    mv "$pkg_name/ya" "$BIN_DIR"
+    rm -r "$pkg_name"
+    echo "yazi installed"
+}
+
+install_rg () {
+    local pkg_name="ripgrep_${PKGS[rg]}-1_amd64"
+    create_dirs
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/BurntSushi/ripgrep/releases/download/${PKGS[rg]}/$pkg_name.deb"
+    rm -rf usr
+    dpkg-deb -x "$pkg_name.deb" . > /dev/null
+    mv usr/bin/rg "$BIN_DIR"
+    rm -rf usr
+    echo "rg installed"
+}
+
+install_comicshanns () {
+    local pkg_name="ComicShannsMono"
+    create_dirs
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/ryanoasis/nerd-fonts/releases/download/v${FONTS[ComicShannsMono]}/$pkg_name.zip"
+    rm -rf "$pkg_name"/*.md
+    rm -rf "$pkg_name"/*.otf
+    unzip "$pkg_name.zip" -d "./$pkg_name" > /dev/null
+    mv "$pkg_name"/*.otf "$FONTS_DIR"
+    rm -rf "$pkg_name"
+    echo "comicshanns installed"
 }
 
 # MAIN
 
 main () {
     check_dependencies
+    check_installed
+    check_path
+    for pkg in "${!PKGS[@]}"; do
+         install_"$pkg"
+    done
+    install_comicshanns
 }
 
 main "$@"
