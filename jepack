@@ -13,6 +13,7 @@ PKGS=(
     [fd]=10.3.0
     [fzf]=0.67.0
     [rg]=15.1.0
+    [tree-sitter]=0.26.3
     [yazi]=26.1.4
 )
 
@@ -35,24 +36,33 @@ which_installed () {
     fi
 }
 check_dependencies () {
+    quit=false
     if ! [[ $(uname -r) =~ amd64 ]]; then
         echo "ERROR: this program is only compatible with amd64" 1>&2
-        exit 1
+        quit=true
     fi
     if ! which_installed curl; then
         echo "ERROR: curl is not installed" 1>&2
-        exit 1
+        quit=true
     fi
     if ! which_installed tar; then
         echo "ERROR: tar is not installed" 1>&2
-        exit 1
+        quit=true
     fi
     if ! which_installed dpkg-deb; then
         echo "ERROR: dpkg-deb is not installed" 1>&2
-        exit 1
+        quit=true
     fi
     if ! which_installed unzip; then
         echo "ERROR: unzip is not installed" 1>&2
+        quit=true
+    fi
+    if ! which_installed gzip; then
+        echo "ERROR: gzip is not installed" 1>&2
+        quit=true
+    fi
+
+    if $quit; then
         exit 1
     fi
 }
@@ -79,7 +89,7 @@ print_check_pkg () {
     if [[ $installed = false ]]; then
         echo "✗ $1 not installed"
     else
-        echo "✓ $1 good"
+        echo "✓ $1 installed"
     fi
 }
 
@@ -147,6 +157,18 @@ install_rg () {
     echo "rg installed"
 }
 
+install_tree-sitter () {
+    local pkg_name="tree-sitter-linux-x64"
+    create_dirs
+    cd "$TARS_DIR" || exit 1
+    curl -s -LO "https://github.com/tree-sitter/tree-sitter/releases/download/v${PKGS[tree-sitter]}/$pkg_name.gz"
+    rm -f "$pkg_namee"
+    gzip -f -d "$pkg_name.gz" > /dev/null
+    mv "$pkg_name" "$BIN_DIR/tree-sitter"
+    rm -f "$pkg_namee"
+    echo "tree-sitter installed"
+}
+
 install_comicshanns () {
     local pkg_name="ComicShannsMono"
     create_dirs
@@ -165,11 +187,15 @@ install_comicshanns () {
 main () {
     check_dependencies
     check_installed
-    check_path
+
     for pkg in "${!PKGS[@]}"; do
-         install_"$pkg"
+        if ! check_pkg; then
+            install_"$pkg"
+        fi
     done
-    install_comicshanns
+    if ! [[ -e $FONTS_DIR/ComicShannsMonoNerdFont-Regular.otf ]]; then
+        install_comicshanns
+    fi
 }
 
 main "$@"
